@@ -24,30 +24,54 @@ for line, (input_doc, target_doc) in enumerate(zip(input_docs, target_docs)):
      
     for timestep, token in enumerate(input_doc.split()):
 
-        encoder_input[line, timestep, input_features_dict[token]] = 1
+        encoder_input[line, timestep, input_features_dict[token]] = 1.
 
     for timestep, token in enumerate(target_doc.split()):
 
-        decoder_input[line, timestep, target_features_dict[token]] = 1
+        decoder_input[line, timestep, target_features_dict[token]] = 1.
 
 # Define an encoder 
 
 encoder_inputs = Input(shape=(None, num_encoder_tokens))
-decoder = Input(shape=(None, num_decoder_tokens))
 
 latent_dim = 256
 encoder = LSTM(latent_dim, return_state=True)
 
-encoder_model, encoder_hidden, encoder_state = encoder(encoder_inputs)
+encoder_model, encoder_hidden, encoder_cell = encoder(encoder_inputs)
 
-encoder_states = [encoder_hidden, encoder_state]
+encoder_states = [encoder_hidden, encoder_cell]
+
+# Define a decoder
 
 decoder_inputs = Input(shape(None, num_decoder_tokens))
 decoder = LSTM(latent_dim, return_sequences=True, return_state=True)
 
 decoder_outputs, _, _ = decoder(decoder_inputs, initial_state=encoder_states)
+decoder_dense = Dense(num_decoder_tokens, activation='softmax')
 
-decoder_dense = decoder_dense(decoder_outputs)
+decoder_outputs = decoder_dense(decoder_outputs)
+
+# Build the training model
+
+model = Model([encoder_inputs, decoder_inputs], decoder_outputs)
+
+print("Model summary: \n")
+model.summary()
+print("\n")
+
+model.compile(optimizer="rmsprop",
+              loss="categorical_crossentropy",
+              metrics=["accuracy"])
+
+# Choose the batch size and number of epochs
+batch_size=50
+epochs=50
+
+model.fit([encoder_input_data, decoder_input_data],
+                    decoder_target_data,
+                    batch_size=batch_size,
+                    epochs=epochs,
+                    validation_split=0.2)
 
 
 
